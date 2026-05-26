@@ -1,0 +1,1177 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Flashcard Studio — Trello & TickTick Style</title>
+    <style>
+        :root {
+            --ticktick-sidebar-bg: #262626;
+            --ticktick-sidebar-text: #bbbbbb;
+            --ticktick-sidebar-active-bg: #363636;
+            --ticktick-sidebar-active-text: #ffffff;
+            
+            --trello-board-bg: #0079bf;
+            --trello-column-bg: #f1f2f4;
+            --trello-card-bg: #ffffff;
+            --trello-card-text: #172b4d;
+            
+            --accent-blue: #0071e3;
+            --border-color: #e5e5ea;
+            --danger-red: #ae2e24;
+            
+            --shadow-card: 0 1px 1px rgba(0,0,0,0.12), 0 0 1px rgba(0,0,0,0.24);
+            --shadow-popover: 0 8px 16px -4px rgba(9,30,66,0.25), 0 0 1px rgba(9,30,66,0.31);
+            --radius-trello: 12px;
+            --radius-card: 8px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: var(--trello-board-bg);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .header {
+            background: rgba(0, 0, 0, 0.15);
+            backdrop-filter: blur(4px);
+            padding: 10px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 10;
+        }
+        .header h1 { 
+            font-size: 16px; 
+            font-weight: 700; 
+            color: rgba(255, 255, 255, 0.85);
+        }
+
+        .main-layout {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .decks-panel {
+            width: 260px;
+            background: var(--ticktick-sidebar-bg);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            flex-shrink: 0;
+            transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            border-right: 1px solid rgba(255,255,255,0.05);
+        }
+        .decks-panel.collapsed {
+            width: 50px;
+        }
+        .decks-panel.collapsed .decks-header span,
+        .decks-panel.collapsed .deck-item .deck-name,
+        .decks-panel.collapsed .deck-item .deck-badge,
+        .decks-panel.collapsed .decks-header .new-deck-btn,
+        .decks-panel.collapsed .deck-actions {
+            display: none;
+        }
+        .decks-panel.collapsed .deck-item {
+            justify-content: center;
+            padding: 12px 0;
+        }
+
+        .decks-header {
+            padding: 16px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .decks-header span {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: #737373;
+            font-weight: 700;
+        }
+        .new-deck-btn {
+            background: #3a3a3a;
+            color: #fff;
+            border: none;
+            padding: 4px 8px;
+            font-size: 11px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .new-deck-btn:hover { background: #4a4a4a; }
+
+        .decks-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+        }
+
+        .deck-item {
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-bottom: 3px;
+            font-size: 13px;
+            color: var(--ticktick-sidebar-text);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.1s ease;
+        }
+        .deck-item:hover { 
+            background: rgba(255,255,255,0.05); 
+            color: #ffffff;
+        }
+        .deck-item.active { 
+            background: var(--ticktick-sidebar-active-bg); 
+            color: var(--ticktick-sidebar-active-text); 
+            font-weight: 500; 
+        }
+        .deck-name { 
+            flex: 1; 
+            white-space: nowrap; 
+            overflow: hidden; 
+            text-overflow: ellipsis; 
+        }
+        .deck-badge { 
+            font-size: 11px; 
+            color: #8c8c8c;
+            margin-left: 6px;
+            background: rgba(255,255,255,0.1);
+            padding: 1px 5px;
+            border-radius: 10px;
+        }
+        .deck-actions {
+            opacity: 0;
+            display: flex;
+            gap: 2px;
+        }
+        .deck-item:hover .deck-actions { opacity: 1; }
+        .deck-actions button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 12px;
+            padding: 0 4px;
+            color: #8c8c8c;
+        }
+        .deck-actions button:hover { color: #fff; }
+
+        .kanban {
+            flex: 3;
+            display: flex;
+            gap: 12px;
+            padding: 12px;
+            overflow-x: auto;
+            align-items: flex-start;
+        }
+
+        .column {
+            min-width: 270px;
+            width: 280px;
+            max-width: 500px;
+            background: var(--trello-column-bg);
+            border-radius: var(--radius-trello);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            max-height: 100%;
+            box-shadow: 0 4px 8px -2px rgba(9,30,66,0.25);
+            resize: horizontal;
+        }
+
+        .column-header {
+            padding: 12px 14px;
+            font-weight: 600;
+            font-size: 14px;
+            color: #172b4d;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
+        }
+
+        .column-actions { position: relative; }
+        .column-menu-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            color: #44546f;
+            padding: 4px 6px;
+            border-radius: 6px;
+        }
+        .column-menu-btn:hover { background: #dcdfe4; }
+        
+        .column-menu {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: 26px;
+            background: #ffffff;
+            border-radius: 8px;
+            box-shadow: var(--shadow-popover);
+            z-index: 20;
+            width: 200px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+        .column-menu.show { display: block; }
+        .column-menu button {
+            display: block;
+            width: 100%;
+            padding: 8px 12px;
+            text-align: left;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 13px;
+            color: #172b4d;
+        }
+        .column-menu button:hover { background: #f1f2f4; }
+
+        .cards-list {
+            flex: 1;
+            padding: 0 8px 8px 8px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            min-height: 100px;
+        }
+
+        .card {
+            background: var(--trello-card-bg);
+            border-radius: var(--radius-card);
+            padding: 8px 12px;
+            cursor: pointer;
+            box-shadow: var(--shadow-card);
+            position: relative;
+            outline: none;
+            transition: background 0.15s ease;
+        }
+        .card:hover { background: #f9fafb; }
+        .card.selected { 
+            background: #e4f0fa; 
+            border: 2px solid var(--trello-board-bg);
+            padding: 6px 10px;
+        }
+        .card.dragging { opacity: 0.4; }
+
+        .card-question { 
+            font-size: 14px; 
+            color: var(--trello-card-text);
+            font-weight: 400;
+            line-height: 1.4;
+            margin-bottom: 4px;
+            padding-right: 32px;
+            white-space: pre-wrap; 
+        }
+        .card-answer { 
+            font-size: 12px; 
+            color: #44546f;
+            white-space: nowrap; 
+            overflow: hidden; 
+            text-overflow: ellipsis; 
+        }
+
+        /* Стиль для тега времени */
+        .card-time-tag {
+            font-size: 10px;
+            font-weight: 600;
+            color: #ffffff;
+            padding: 2px 6px;
+            border-radius: 4px;
+            display: inline-block;
+            margin-top: 6px;
+        }
+
+        .card-actions {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            opacity: 0;
+            transition: opacity 0.1s;
+            display: flex;
+            gap: 2px;
+            background: #ffffff;
+            border-radius: 4px;
+            box-shadow: var(--shadow-card);
+        }
+        .card:hover .card-actions { opacity: 1; }
+        .card-actions button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 11px;
+            padding: 2px 4px;
+            color: #44546f;
+        }
+        .card-actions button:hover { color: #172b4d; background: #f1f2f4; }
+
+        .bottom-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(6px);
+            padding: 12px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 10;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+        }
+
+        .input-row {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+        .input-row textarea {
+            flex: 1;
+            background: #ffffff;
+            border: 1px solid #ced4da;
+            border-radius: 8px;
+            padding: 8px 14px;
+            font-size: 13px;
+            resize: none;
+            font-family: inherit;
+            outline: none;
+            line-height: 1.4;
+        }
+        .input-row textarea:focus { border-color: var(--trello-board-bg); box-shadow: 0 0 0 2px rgba(0,121,191,0.3); }
+
+        .file-info { font-size: 11px; color: var(--trello-board-bg); font-weight: 600; }
+        
+        .controls-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        button, .model-selector {
+            background: #f1f2f4;
+            border: none;
+            border-radius: 6px;
+            padding: 6px 12px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            color: #172b4d;
+        }
+        button:hover { background: #dcdfe4; }
+        
+        .primary-btn { background: #0052cc; color: white; }
+        .primary-btn:hover { background: #0043a4; }
+        .primary-btn:disabled { background: #a5b8db; cursor: not-allowed; }
+
+        .model-selector {
+            border: 1px solid #ced4da;
+            background: #ffffff;
+        }
+
+        .progress-container {
+            display: none;
+            background: #ffffff;
+            border: 1px solid #ced4da;
+            border-radius: 8px;
+            padding: 10px 14px;
+            margin-bottom: 4px;
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
+        }
+        .progress-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            font-weight: 600;
+            color: #172b4d;
+            margin-bottom: 6px;
+        }
+        .progress-track {
+            width: 100%;
+            background: #e1e2e6;
+            height: 8px;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .progress-bar-fill {
+            width: 0%;
+            background: #5aac44;
+            height: 100%;
+            transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .modal.active { display: flex; }
+        .modal-content {
+            background: #ffffff;
+            border-radius: 8px;
+            width: 500px;
+            max-width: 90%;
+            padding: 20px;
+            max-height: 90%;
+            overflow-y: auto;
+            box-shadow: var(--shadow-popover);
+        }
+        .modal-content h3 { font-size: 16px; margin-bottom: 14px; color: #172b4d; }
+        
+        .field { margin-bottom: 12px; }
+        .field label { display: block; font-size: 12px; font-weight: 700; color: #44546f; margin-bottom: 4px; }
+        .field input, .field textarea, .field select {
+            width: 100%;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #ced4da;
+            font-family: inherit;
+            font-size: 13px;
+        }
+        .field textarea { min-height: 80px; resize: vertical; white-space: pre-wrap; }
+        
+        .modal-buttons { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+
+        .drop-zone-active { background: #e4f0fa !important; border: 2px dashed var(--trello-board-bg) !important; }
+
+        .toggle-sidebar {
+            background: none;
+            font-size: 12px;
+            cursor: pointer;
+            margin-right: 6px;
+            color: #bbbbbb;
+            padding: 2px 6px;
+        }
+        .toggle-sidebar:hover { background: rgba(255,255,255,0.1); color: #fff; }
+        
+        .mass-delete-btn {
+            position: fixed;
+            top: 8px;
+            right: 20px;
+            z-index: 100;
+            background: var(--danger-red);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 6px 12px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .mass-delete-btn:hover { background: #932219; }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.05); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.2); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.3); }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>AI Flashcard Studio</h1>
+</div>
+
+<div class="main-layout">
+    <div class="decks-panel" id="decksPanel">
+        <div class="decks-header">
+            <div>
+                <button id="toggleSidebarBtn" class="toggle-sidebar" title="Свернуть/развернуть">◀</button>
+                <span>Колоды</span>
+            </div>
+            <button id="newDeckBtn" class="new-deck-btn">+ Новая</button>
+        </div>
+        <div class="decks-list" id="decksList"></div>
+    </div>
+    <div class="kanban" id="kanbanBoard"></div>
+</div>
+
+<div class="bottom-panel" id="dropZone">
+    <div class="progress-container" id="progressContainer">
+        <div class="progress-info">
+            <span id="progressText">Подготовка нейросети...</span>
+            <span id="progressPercent">0%</span>
+        </div>
+        <div class="progress-track">
+            <div class="progress-bar-fill" id="progressBarFill"></div>
+        </div>
+    </div>
+
+    <div class="input-row">
+        <textarea id="messageInput" placeholder="Введите текст, ссылку на сайт или YouTube, либо перетащите файл..." rows="1"></textarea>
+        <button id="sendBtn" class="primary-btn">Сгенерировать</button>
+    </div>
+    <div class="file-info" id="fileInfo"></div>
+    <div class="controls-row">
+        <div style="display: flex; gap: 8px;">
+            <select id="modelSelect" class="model-selector">
+                <option value="gemma-4-E2B-it">Gemma 4 (быстрая)</option>
+                <option value="supergemma4-e4b-abliterated">SuperGemma 4 (мощная)</option>
+            </select>
+            <button id="exportAnkiBtn">📦 Anki</button>
+            <button id="exportPdfBtn">📄 PDF</button>
+        </div>
+        <div>
+            <span id="syncStatus" style="font-size: 11px; color: #44546f;">Готово</span>
+        </div>
+    </div>
+</div>
+
+<div id="editModal" class="modal">
+    <div class="modal-content">
+        <h3>Редактировать карточку</h3>
+        <div class="field">
+            <label>Вопрос</label>
+            <input type="text" id="editFront">
+        </div>
+        <div class="field">
+            <label>Ответ</label>
+            <textarea id="editBack" rows="3"></textarea>
+        </div>
+        <div class="field">
+            <label>Источник</label>
+            <textarea id="editSource"></textarea>
+        </div>
+        <div class="field">
+            <label>Мнемоника</label>
+            <textarea id="editMnemonic"></textarea>
+        </div>
+        <div class="field">
+            <label>Статус</label>
+            <select id="editStatus">
+                <option value="inbox">📥 Входящие</option>
+                <option value="today">📅 Сегодня</option>
+                <option value="planned">📆 Запланированные</option>
+                <option value="done">✅ Готово</option>
+            </select>
+        </div>
+        <div class="field">
+            <label>Дата выполнения</label>
+            <input type="date" id="editDueDate">
+        </div>
+        <div class="modal-buttons">
+            <button id="cancelEditBtn">Отмена</button>
+            <button id="saveEditBtn" class="primary-btn">Сохранить</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let decks = [];
+    let currentDeckId = null;
+    let currentCards = [];
+    let selectedCardIds = new Set();
+    let dragCardId = null;
+    let currentModel = "gemma-4-E2B-it";
+    let uploadedFile = null;
+    let editCardId = null;
+    let scrollPositions = {};
+    let pollingInterval = null;
+
+    const columns = [
+        { id: 'inbox', title: '📥 Входящие' },
+        { id: 'today', title: '📅 Сегодня' },
+        { id: 'planned', title: '📆 Запланированные' },
+        { id: 'done', title: '✅ Готово' }
+    ];
+
+    // Хэширование и форматирование времени для цветных меток
+    const TAG_COLORS = ["#ff2d55", "#ff9500", "#4cd964", "#5856d6", "#007aff", "#34aadc", "#ffcc00"];
+    function getHashColor(str) {
+        if (!str) return TAG_COLORS[0];
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            hash = str.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        return TAG_COLORS[Math.abs(hash) % TAG_COLORS.length];
+    }
+    function formatCardTime(isoString) {
+        if (!isoString) return "";
+        const date = new Date(isoString);
+        const now = new Date();
+        const diffMs = now - date;
+        const diffHours = diffMs / (1000 * 60 * 60);
+        const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        
+        if (diffHours < 24) {
+            if (date.getDate() === now.getDate()) {
+                return `🆕 Сегодня в ${timeStr}`;
+            } else {
+                return `🆕 Вчера в ${timeStr}`;
+            }
+        }
+        return `📅 ${date.toLocaleDateString()}`;
+    }
+
+    const sidebarCollapsedKey = 'sidebarCollapsed';
+    function loadSidebarState() {
+        const collapsed = localStorage.getItem(sidebarCollapsedKey) === 'true';
+        const panel = document.getElementById('decksPanel');
+        if (collapsed) panel.classList.add('collapsed');
+        const btn = document.getElementById('toggleSidebarBtn');
+        if (btn) btn.textContent = collapsed ? '▶' : '◀';
+    }
+    function toggleSidebar() {
+        const panel = document.getElementById('decksPanel');
+        const isCollapsed = panel.classList.toggle('collapsed');
+        localStorage.setItem(sidebarCollapsedKey, isCollapsed);
+        const btn = document.getElementById('toggleSidebarBtn');
+        if (btn) btn.textContent = isCollapsed ? '▶' : '◀';
+    }
+
+    async function loadDecks() {
+        const resp = await fetch('/api/decks');
+        decks = await resp.json();
+        renderDecks();
+        if (!currentDeckId && decks.length) {
+            currentDeckId = decks[0].id;
+            await loadCards(currentDeckId);
+        } else if (currentDeckId && !decks.find(d => d.id === currentDeckId)) {
+            currentDeckId = decks.length ? decks[0].id : null;
+            if (currentDeckId) await loadCards(currentDeckId);
+            else renderKanban();
+        } else if (currentDeckId) {
+            await loadCards(currentDeckId);
+        }
+    }
+
+    function renderDecks() {
+        const container = document.getElementById('decksList');
+        if (!decks.length) {
+            container.innerHTML = '<div style="padding: 8px; color: #8c8c8c; font-size:12px;">Нет колод.</div>';
+            return;
+        }
+        container.innerHTML = decks.map(d => `
+            <div class="deck-item ${currentDeckId === d.id ? 'active' : ''}" data-id="${d.id}">
+                <span class="deck-name">${escapeHtml(d.name)}</span>
+                <span class="deck-badge" id="badge-deck-${d.id}">${d.card_count}</span>
+                <div class="deck-actions">
+                    <button class="edit-deck" data-id="${d.id}">✎</button>
+                    <button class="delete-deck" data-id="${d.id}">🗑️</button>
+                </div>
+            </div>
+        `).join('');
+        document.querySelectorAll('.edit-deck').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const id = parseInt(btn.dataset.id);
+                const deck = decks.find(d => d.id === id);
+                const newName = prompt('Новое название колоды:', deck.name);
+                if (newName && newName !== deck.name) {
+                    await fetch(`/api/decks/${id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name: newName })
+                    });
+                    await loadDecks();
+                }
+            });
+        });
+        document.querySelectorAll('.delete-deck').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const id = parseInt(btn.dataset.id);
+                if (!confirm('Удалить колоду и все карточки?')) return;
+                await fetch(`/api/decks/${id}`, { method: 'DELETE' });
+                if (currentDeckId === id) {
+                    currentDeckId = null;
+                    selectedCardIds.clear();
+                }
+                await loadDecks();
+            });
+        });
+        document.querySelectorAll('.deck-item .deck-name, .deck-item .deck-badge').forEach(el => {
+            const parent = el.closest('.deck-item');
+            parent.addEventListener('click', async (e) => {
+                if (e.target.classList.contains('edit-deck') || e.target.classList.contains('delete-deck')) return;
+                const id = parseInt(parent.dataset.id);
+                if (currentDeckId === id) return;
+                currentDeckId = id;
+                selectedCardIds.clear();
+                stopPolling(); 
+                await loadCards(currentDeckId);
+                renderDecks();
+            });
+        });
+    }
+
+    async function loadCards(deckId) {
+        if (!deckId) return;
+        const resp = await fetch(`/api/decks/${deckId}/cards`);
+        currentCards = await resp.json();
+        
+        const badge = document.getElementById(`badge-deck-${deckId}`);
+        if(badge) badge.textContent = currentCards.length;
+
+        renderKanban();
+        if (selectedCardIds.size === 1) {
+            const id = Array.from(selectedCardIds)[0];
+            if (!currentCards.find(c => c.id === id)) selectedCardIds.clear();
+        } else if (selectedCardIds.size === 0 && currentCards.length > 0) {
+            selectedCardIds.add(currentCards[0].id);
+            renderKanban();
+        }
+        setTimeout(() => {
+            Object.entries(scrollPositions).forEach(([status, pos]) => {
+                const list = document.querySelector(`.cards-list[data-status="${status}"]`);
+                if (list) list.scrollTop = pos;
+            });
+        }, 50);
+    }
+
+    function saveScrollPositions() {
+        document.querySelectorAll('.cards-list').forEach(list => {
+            const status = list.getAttribute('data-status');
+            if (status) scrollPositions[status] = list.scrollTop;
+        });
+    }
+
+    function restoreScrollPositions() {
+        Object.entries(scrollPositions).forEach(([status, pos]) => {
+            const list = document.querySelector(`.cards-list[data-status="${status}"]`);
+            if (list) list.scrollTop = pos;
+        });
+    }
+
+    function renderKanban() {
+        const container = document.getElementById('kanbanBoard');
+        if (!currentDeckId) {
+            container.innerHTML = '<div style="padding: 20px; color: white;">Выберите колоду слева</div>';
+            return;
+        }
+        if (!currentCards.length) {
+            container.innerHTML = '<div style="padding: 20px; color: white;">Колода пуста. Сгенерируйте карточки или подождите фоновой обработки...</div>';
+            return;
+        }
+        const byStatus = { inbox: [], today: [], planned: [], done: [] };
+        currentCards.forEach(c => byStatus[c.status || 'inbox'].push(c));
+        container.innerHTML = '';
+        columns.forEach(col => {
+            const colDiv = document.createElement('div');
+            colDiv.className = 'column';
+            colDiv.setAttribute('data-status', col.id);
+            colDiv.innerHTML = `
+                <div class="column-header">
+                    <span>${col.title} <span style="color: #44546f; font-weight:normal; font-size:12px;">(${byStatus[col.id].length})</span></span>
+                    <div class="column-actions">
+                        <button class="column-menu-btn" data-status="${col.id}">⋮</button>
+                        <div class="column-menu" data-status="${col.id}">
+                            <button class="add-card-btn" data-status="${col.id}">+ Добавить карточку</button>
+                            <button class="clear-column-btn" data-status="${col.id}">🗑️ Очистить колонку</button>
+                            <button class="zoom-out-col" data-status="${col.id}">− Уменьшить колонку</button>
+                            <button class="zoom-in-col" data-status="${col.id}">+ Увеличить колонку</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="cards-list" data-status="${col.id}"></div>
+            `;
+            const listDiv = colDiv.querySelector('.cards-list');
+            byStatus[col.id].forEach(card => {
+                const cardEl = createCardElement(card);
+                listDiv.appendChild(cardEl);
+            });
+            listDiv.addEventListener('dragover', e => e.preventDefault());
+            listDiv.addEventListener('drop', async e => {
+                e.preventDefault();
+                const targetStatus = listDiv.getAttribute('data-status');
+                if (dragCardId && targetStatus) {
+                    await fetch(`/api/cards/${dragCardId}/status`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ status: targetStatus })
+                    });
+                    await loadCards(currentDeckId);
+                    dragCardId = null;
+                }
+            });
+            listDiv.addEventListener('scroll', () => {
+                scrollPositions[col.id] = listDiv.scrollTop;
+            });
+            container.appendChild(colDiv);
+        });
+        document.querySelectorAll('.column-menu-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const status = btn.dataset.status;
+                const menu = document.querySelector(`.column-menu[data-status="${status}"]`);
+                document.querySelectorAll('.column-menu').forEach(m => { if (m !== menu) m.classList.remove('show'); });
+                menu.classList.toggle('show');
+            });
+        });
+        document.querySelectorAll('.column-menu').forEach(menu => {
+            const status = menu.dataset.status;
+            const addBtn = menu.querySelector('.add-card-btn');
+            const clearBtn = menu.querySelector('.clear-column-btn');
+            const zoomOutBtn = menu.querySelector('.zoom-out-col');
+            const zoomInBtn = menu.querySelector('.zoom-in-col');
+            addBtn.addEventListener('click', () => {
+                alert('Используйте генератор ИИ снизу для добавления контента.');
+                menu.classList.remove('show');
+            });
+            clearBtn.addEventListener('click', async () => {
+                const colTitle = columns.find(c => c.id === status).title;
+                if (!confirm(`Удалить все карточки из колонки "${colTitle}"?`)) return;
+                const cardsToDelete = currentCards.filter(c => c.status === status);
+                for (let card of cardsToDelete) {
+                    await fetch(`/api/cards/${card.id}`, { method: 'DELETE' });
+                }
+                await loadCards(currentDeckId);
+                menu.classList.remove('show');
+            });
+            zoomOutBtn.addEventListener('click', () => {
+                const col = document.querySelector(`.column[data-status="${status}"]`);
+                if (col) {
+                    let w = parseInt(col.style.width) || 280;
+                    w = Math.max(220, w - 40);
+                    col.style.width = w + 'px';
+                    col.style.minWidth = w + 'px';
+                }
+                menu.classList.remove('show');
+            });
+            zoomInBtn.addEventListener('click', () => {
+                const col = document.querySelector(`.column[data-status="${status}"]`);
+                if (col) {
+                    let w = parseInt(col.style.width) || 280;
+                    w = Math.min(500, w + 40);
+                    col.style.width = w + 'px';
+                    col.style.minWidth = w + 'px';
+                }
+                menu.classList.remove('show');
+            });
+        });
+        document.querySelectorAll('.card').forEach(el => {
+            const id = parseInt(el.dataset.id);
+            if (selectedCardIds.has(id)) el.classList.add('selected');
+        });
+        document.addEventListener('click', () => {
+            document.querySelectorAll('.column-menu').forEach(m => m.classList.remove('show'));
+        });
+        setTimeout(() => restoreScrollPositions(), 20);
+    }
+
+    function createCardElement(card) {
+        const div = document.createElement('div');
+        div.className = 'card';
+        div.setAttribute('data-id', card.id);
+        div.setAttribute('tabindex', '-1');
+        div.draggable = true;
+
+        // Генерация красивого тега времени создания
+        let timeTagHtml = "";
+        if (card.created_at) {
+            const timeLabel = formatCardTime(card.created_at);
+            const isNew = timeLabel.startsWith("🆕");
+            const dateMinuteKey = card.created_at.substring(0, 16); // группировка пачки генерации по минутам
+            const tagColor = isNew ? getHashColor(dateMinuteKey) : "#8c8c8c";
+            timeTagHtml = `<div class="card-time-tag" style="background-color: ${tagColor}; opacity: ${isNew ? 1 : 0.65};">${timeLabel}</div>`;
+        }
+
+        div.innerHTML = `
+            <div class="card-question">${escapeHtml(card.front)}</div>
+            <div class="card-answer">${escapeHtml(card.back.substring(0, 60))}${card.back.length > 60 ? '…' : ''}</div>
+            ${timeTagHtml}
+            <div class="card-actions">
+                <button class="edit-card-btn" data-id="${card.id}">✎</button>
+                <button class="delete-card-btn" data-id="${card.id}">🗑️</button>
+            </div>
+        `;
+        div.ondragstart = (e) => {
+            dragCardId = card.id;
+            div.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+        };
+        div.ondragend = () => div.classList.remove('dragging');
+        div.onclick = (e) => {
+            if (e.target.classList.contains('edit-card-btn') || e.target.classList.contains('delete-card-btn')) return;
+            if (e.shiftKey) {
+                if (selectedCardIds.has(card.id)) selectedCardIds.delete(card.id);
+                else selectedCardIds.add(card.id);
+                renderKanban();
+            } else {
+                selectedCardIds.clear();
+                selectedCardIds.add(card.id);
+                renderKanban();
+            }
+        };
+        div.ondblclick = (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            saveScrollPositions();
+            editCardId = card.id;
+            openModal(card);
+        };
+        div.querySelector('.edit-card-btn').onclick = (e) => {
+            e.stopPropagation();
+            saveScrollPositions();
+            editCardId = card.id;
+            openModal(card);
+        };
+        div.querySelector('.delete-card-btn').onclick = async (e) => {
+            e.stopPropagation();
+            if (!confirm('Удалить карточку?')) return;
+            await fetch(`/api/cards/${card.id}`, { method: 'DELETE' });
+            if (selectedCardIds.has(card.id)) selectedCardIds.delete(card.id);
+            await loadCards(currentDeckId);
+        };
+        return div;
+    }
+
+    function openModal(card) {
+        document.getElementById('editFront').value = card.front;
+        document.getElementById('editBack').value = card.back;
+        document.getElementById('editSource').value = card.source_quote || '';
+        document.getElementById('editMnemonic').value = card.mnemonic || '';
+        document.getElementById('editStatus').value = card.status || 'inbox';
+        document.getElementById('editDueDate').value = card.due_date ? card.due_date.split('T')[0] : '';
+        document.getElementById('editModal').classList.add('active');
+        if (document.activeElement) document.activeElement.blur();
+        document.body.style.overflow = 'hidden';
+    }
+
+    async function saveEdit() {
+        const updated = {
+            front: document.getElementById('editFront').value,
+            back: document.getElementById('editBack').value,
+            source_quote: document.getElementById('editSource').value,
+            mnemonic: document.getElementById('editMnemonic').value,
+            status: document.getElementById('editStatus').value,
+            due_date: document.getElementById('editDueDate').value || null
+        };
+        if (!updated.front || !updated.back) return alert('Заполните вопрос и ответ');
+        await fetch(`/api/cards/${editCardId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updated)
+        });
+        closeModal();
+        await loadCards(currentDeckId);
+    }
+
+    function closeModal() {
+        document.getElementById('editModal').classList.remove('active');
+        document.body.style.overflow = '';
+        setTimeout(() => { restoreScrollPositions(); }, 100);
+        editCardId = null;
+    }
+
+    function startPolling() {
+        stopPolling();
+        
+        const progressContainer = document.getElementById('progressContainer');
+        const progressText = document.getElementById('progressText');
+        const progressPercent = document.getElementById('progressPercent');
+        const progressBarFill = document.getElementById('progressBarFill');
+        const syncStatus = document.getElementById('syncStatus');
+        
+        // Возвращаем стандартный цвет бара
+        progressBarFill.style.backgroundColor = '#5aac44';
+        progressContainer.style.display = 'block';
+        syncStatus.textContent = '⚙️ Обработка кусков текста...';
+
+        pollingInterval = setInterval(async () => {
+            try {
+                const resp = await fetch(`/api/decks/${currentDeckId}/progress`);
+                const data = await resp.json();
+                
+                if (data.status === 'processing') {
+                    const percent = data.total > 0 ? Math.round((data.current / data.total) * 100) : 0;
+                    progressText.textContent = `Обработано кусков: ${data.current} из ${data.total}`;
+                    progressPercent.textContent = `${percent}%`;
+                    progressBarFill.style.width = `${percent}%`;
+                    await loadCards(currentDeckId); 
+                } 
+                else if (data.status === 'completed') {
+                    progressText.textContent = 'Генерация успешно завершена!';
+                    progressPercent.textContent = '100%';
+                    progressBarFill.style.width = '100%';
+                    await loadCards(currentDeckId);
+                    setTimeout(() => {
+                        progressContainer.style.display = 'none';
+                        stopPolling();
+                    }, 2000);
+                }
+                else if (data.status === 'error') {
+                    // Обрабатываем критическую ошибку, перекрашивая бар в красный цвет
+                    progressText.textContent = data.message || 'Ошибка генерации';
+                    progressPercent.textContent = '❌';
+                    progressBarFill.style.width = '100%';
+                    progressBarFill.style.backgroundColor = 'var(--danger-red)';
+                    stopPolling();
+                    
+                    // Плавно скрываем окно ошибки через 5 секунд, чтобы не висело вечно
+                    setTimeout(() => {
+                        progressContainer.style.display = 'none';
+                    }, 5000);
+                }
+            } catch (e) {
+                console.error("Ошибка опроса прогресса:", e);
+            }
+        }, 3000);
+    }
+
+    function stopPolling() {
+        if (pollingInterval) {
+            clearInterval(pollingInterval);
+            pollingInterval = null;
+        }
+        document.getElementById('syncStatus').textContent = 'Готово';
+    }
+
+    async function generate() {
+        if (!currentDeckId) return alert('Сначала выберите колоду');
+        let input = document.getElementById('messageInput').value.trim();
+        if (!input && !uploadedFile) return alert('Введите контент или перетащите файл');
+        
+        const btn = document.getElementById('sendBtn');
+        btn.disabled = true;
+        btn.textContent = 'Запуск...';
+        
+        try {
+            let resp;
+            if (uploadedFile) {
+                const fd = new FormData();
+                fd.append('file', uploadedFile);
+                resp = await fetch(`/api/decks/${currentDeckId}/cards/generate-from-file`, { method: 'POST', body: fd });
+                uploadedFile = null;
+                document.getElementById('fileInfo').textContent = `Файл: ${file.name}`;
+                document.getElementById('messageInput').value = '';
+            }
+            else if (input.startsWith('http://') || input.startsWith('https://')) {
+                if (input.includes('youtube.com') || input.includes('youtu.be')) {
+                    resp = await fetch(`/api/decks/${currentDeckId}/cards/generate-from-youtube`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ url: input })
+                    });
+                } else {
+                    resp = await fetch(`/api/decks/${currentDeckId}/cards/generate-from-url`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ url: input })
+                    });
+                }
+                document.getElementById('messageInput').value = '';
+            }
+            else {
+                resp = await fetch(`/api/decks/${currentDeckId}/cards/generate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content: input })
+                });
+                document.getElementById('messageInput').value = '';
+            }
+            
+            if (!resp.ok) throw new Error(await resp.text());
+            startPolling();
+        } catch(e) {
+            alert('Ошибка: ' + e.message);
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Сгенерировать';
+        }
+    }
+
+    async function deleteSelected() {
+        if (selectedCardIds.size === 0) return;
+        if (!confirm(`Удалить ${selectedCardIds.size} карточек?`)) return;
+        for (let id of selectedCardIds) {
+            await fetch(`/api/cards/${id}`, { method: 'DELETE' });
+        }
+        selectedCardIds.clear();
+        await loadCards(currentDeckId);
+    }
+
+    function exportAnki() {
+        if (!currentDeckId) return alert('Выберите колоду');
+        window.open(`/api/decks/${currentDeckId}/export/anki`, '_blank');
+    }
+    function exportPdf() {
+        if (!currentDeckId) return alert('Выберите колоду');
+        window.open(`/api/decks/${currentDeckId}/export/pdf`, '_blank');
+    }
+
+    async function switchModel(model) {
+        await fetch(`/api/model/switch?model_name=${model}`, { method: 'POST' });
+        document.getElementById('syncStatus').textContent = 'Модель переключена';
+        setTimeout(() => document.getElementById('syncStatus').textContent = 'Готово', 2000);
+    }
+
+    function escapeHtml(s) { return s ? s.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m] || m)) : ''; }
+
+    const dropZone = document.getElementById('dropZone');
+    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drop-zone-active'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drop-zone-active'));
+    dropZone.addEventListener('drop', async e => {
+        e.preventDefault();
+        dropZone.classList.remove('drop-zone-active');
+        const file = e.dataTransfer.files[0];
+        if (!file) return;
+        uploadedFile = file;
+        document.getElementById('fileInfo').textContent = `Файл: ${file.name}`;
+        if (file.type === 'text/plain') {
+            const text = await file.text();
+            document.getElementById('messageInput').value = text;
+        } else {
+            document.getElementById('messageInput').value = '';
+        }
+    });
+
+    document.getElementById('sendBtn').addEventListener('click', generate);
+    document.getElementById('messageInput').addEventListener('keypress', e => {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); generate(); }
+    });
+    document.getElementById('newDeckBtn').addEventListener('click', async () => {
+        let name = prompt('Название колоды:', 'Новая колода');
+        if (!name) return;
+        await fetch('/api/decks', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name })
+        });
+        await loadDecks();
+        if (decks.length) {
+            currentDeckId = decks[0].id;
+            await loadCards(currentDeckId);
+            renderDecks();
+        }
+    });
+    document.getElementById('exportAnkiBtn').addEventListener('click', exportAnki);
+    document.getElementById('exportPdfBtn').addEventListener('click', exportPdf);
+    document.getElementById('modelSelect').addEventListener('change', e => switchModel(e.target.value));
+    document.getElementById('cancelEditBtn').addEventListener('click', closeModal);
+    document.getElementById('saveEditBtn').addEventListener('click', saveEdit);
+    document.getElementById('toggleSidebarBtn').addEventListener('click', toggleSidebar);
+
+    const massDeleteBtn = document.createElement('button');
+    massDeleteBtn.textContent = '🗑️ Удалить выбранные';
+    massDeleteBtn.className = 'mass-delete-btn';
+    massDeleteBtn.onclick = deleteSelected;
+    document.body.appendChild(massDeleteBtn);
+
+    async function loadCurrentModel() {
+        const resp = await fetch('/api/model/current');
+        const data = await resp.json();
+        currentModel = data.current_model;
+        document.getElementById('modelSelect').value = currentModel;
+    }
+
+    loadSidebarState();
+    loadCurrentModel();
+    loadDecks();
+</script>
+</body>
+</html>

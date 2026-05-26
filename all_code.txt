@@ -1,0 +1,255 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>AI Flashcard Generator</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; background-color: #f8f9fa; }
+        .container { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        h1, h2 { color: #343a40; }
+        .section { margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid #dee2e6; }
+        textarea { width: 100%; height: 100px; padding: 10px; margin-bottom: 10px; border-radius: 5px; border: 1px solid #ced4da; }
+        button { background-color: #0d6efd; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 16px; transition: 0.3s; }
+        button:hover { background-color: #0b5ed7; }
+        button:disabled { background-color: #6c757d; cursor: not-allowed; }
+        input[type="file"] { margin-bottom: 10px; }
+        
+        #loader { display: none; margin: 20px 0; font-weight: bold; color: #0d6efd; text-align: center; }
+        
+        .cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; margin-top: 20px; }
+        .card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); border-left: 5px solid #198754; display: flex; flex-direction: column; justify-content: space-between;}
+        .card-q { font-weight: bold; color: #212529; margin-bottom: 10px; }
+        .card-a { color: #495057; }
+        .badge { background: #e9ecef; padding: 3px 8px; border-radius: 10px; font-size: 12px; color: #6c757d; align-self: flex-start; margin-bottom: 10px;}
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>ðŸ§  AI Flashcard Generator (Local-First)</h1>
+        <p>Ð¡Ð¸ÑÑ‚ÐµÐ¼Ð° Ð°Ð²Ñ‚Ð¾Ð¼Ð°Ñ‚Ð¸Ñ‡ÐµÑÐºÐ¾Ð¹ Ð³ÐµÐ½ÐµÑ€Ð°Ñ†Ð¸Ð¸ ÑƒÑ‡ÐµÐ±Ð½Ñ‹Ñ… ÐºÐ°Ñ€Ñ‚Ð¾Ñ‡ÐµÐº Ñ Ð½ÑƒÐ»ÐµÐ²Ð¾Ð¹ ÑÑ‚Ð¾Ð¸Ð¼Ð¾ÑÑ‚ÑŒÑŽ Ð¸Ð½Ñ„ÐµÑ€ÐµÐ½ÑÐ° Ð¸ 100% Ð¿Ñ€Ð¸Ð²Ð°Ñ‚Ð½Ð¾ÑÑ‚ÑŒÑŽ.</p>
+        
+        <div class="section">
+            <h2>ðŸ“ Ð¢ÐµÐºÑÑ‚</h2>
+            <textarea id="textInput" placeholder="Ð’ÑÑ‚Ð°Ð²ÑŒÑ‚Ðµ ÐºÐ¾Ð½ÑÐ¿ÐµÐºÑ‚ Ð¸Ð»Ð¸ Ñ‚ÐµÐºÑÑ‚ ÑÑŽÐ´Ð°..."></textarea>
+            <button id="btnText" onclick="generate('text')">Ð¡Ð³ÐµÐ½ÐµÑ€Ð¸Ñ€Ð¾Ð²Ð°Ñ‚ÑŒ Ð¸Ð· Ñ‚ÐµÐºÑÑ‚Ð°</button>
+        </div>
+
+        <div class="section">
+            <h2>ðŸ“„ Ð¢ÐµÐºÑÑ‚Ð¾Ð²Ñ‹Ð¹ Ð´Ð¾ÐºÑƒÐ¼ÐµÐ½Ñ‚ (.txt, .docx)</h2>
+            <input type="file" id="docInput" accept=".txt,.docx">
+            <button id="btnDocument" onclick="generate('document')">ÐŸÑ€Ð¾Ð°Ð½Ð°Ð»Ð¸Ð·Ð¸Ñ€Ð¾Ð²Ð°Ñ‚ÑŒ Ð´Ð¾ÐºÑƒÐ¼ÐµÐ½Ñ‚</button>
+        </div>
+
+        <div class="section" style="border-bottom: none; margin-bottom: 0; padding-bottom: 0;">
+            <h2>ðŸ–¼ï¸ Ð˜Ð·Ð¾Ð±Ñ€Ð°Ð¶ÐµÐ½Ð¸Ðµ (Ð¡Ñ…ÐµÐ¼Ñ‹, Ñ„Ð¾Ñ‚Ð¾, Ð¾Ð±ÑŠÐµÐºÑ‚Ñ‹)</h2>
+            <input type="file" id="imgInput" accept="image/png, image/jpeg, image/webp">
+            <button id="btnImage" onclick="generate('image')">Ð Ð°ÑÐ¿Ð¾Ð·Ð½Ð°Ñ‚ÑŒ Ð¸Ð·Ð¾Ð±Ñ€Ð°Ð¶ÐµÐ½Ð¸Ðµ</button>
+        </div>
+    </div>
+
+    <div id="loader">ÐÐ½Ð°Ð»Ð¸Ð· Ð´Ð°Ð½Ð½Ñ‹Ñ… Ð½ÐµÐ¹Ñ€Ð¾ÑÐµÑ‚ÑŒÑŽ... ÐŸÐ¾Ð¶Ð°Ð»ÑƒÐ¹ÑÑ‚Ð°, Ð¿Ð¾Ð´Ð¾Ð¶Ð´Ð¸Ñ‚Ðµ (ÑÑ‚Ð¾ Ð¼Ð¾Ð¶ÐµÑ‚ Ð·Ð°Ð½ÑÑ‚ÑŒ Ð²Ñ€ÐµÐ¼Ñ) â³</div>
+
+    <div class="container">
+        <h2>ðŸ“š Ð“Ð¾Ñ‚Ð¾Ð²Ñ‹Ðµ ÐºÐ°Ñ€Ñ‚Ð¾Ñ‡ÐºÐ¸</h2>
+        <button onclick="loadCards()" style="background-color: #198754; margin-bottom: 15px;">ðŸ”„ ÐžÐ±Ð½Ð¾Ð²Ð¸Ñ‚ÑŒ Ð²Ð¸Ñ‚Ñ€Ð¸Ð½Ñƒ</button>
+        <div id="cardsContainer" class="cards-grid"></div>
+    </div>
+
+    <script>
+        async function generate(type) {
+            const btnId = `btn${type.charAt(0).toUpperCase() + type.slice(1)}`;
+            const btn = document.getElementById(btnId);
+            const loader = document.getElementById('loader');
+            let url = `/api/generate/${type}`;
+            let options = { method: 'POST' };
+
+            if (type === 'text') {
+                const content = document.getElementById('textInput').value;
+                if (!content) return alert("Ð’Ð²ÐµÐ´Ð¸Ñ‚Ðµ Ñ‚ÐµÐºÑÑ‚!");
+                options.headers = { 'Content-Type': 'application/json' };
+                options.body = JSON.stringify({ content: content });
+            } else {
+                const input = document.getElementById(type === 'document' ? 'docInput' : 'imgInput');
+                const file = input.files[0];
+                if (!file) return alert("Ð’Ñ‹Ð±ÐµÑ€Ð¸Ñ‚Ðµ Ñ„Ð°Ð¹Ð»!");
+                
+                const formData = new FormData();
+                formData.append("file", file);
+                options.body = formData;
+            }
+
+            btn.disabled = true;
+            loader.style.display = 'block';
+
+            try {
+                const response = await fetch(url, options);
+                if (!response.ok) throw new Error("ÐžÑˆÐ¸Ð±ÐºÐ° Ð³ÐµÐ½ÐµÑ€Ð°Ñ†Ð¸Ð¸. ÐŸÑ€Ð¾Ð²ÐµÑ€ÑŒÑ‚Ðµ ÐºÐ¾Ð½ÑÐ¾Ð»ÑŒ ÑÐµÑ€Ð²ÐµÑ€Ð°.");
+                
+                if (type === 'text') document.getElementById('textInput').value = '';
+                else document.getElementById(type === 'document' ? 'docInput' : 'imgInput').value = '';
+                
+                alert("ÐšÐ°Ñ€Ñ‚Ð¾Ñ‡ÐºÐ¸ ÑƒÑÐ¿ÐµÑˆÐ½Ð¾ ÑÐ¾Ð·Ð´Ð°Ð½Ñ‹!");
+                loadCards(); 
+            } catch (error) {
+                alert(error.message);
+            } finally {
+                btn.disabled = false;
+                loader.style.display = 'none';
+            }
+        }
+
+        async function loadCards() {
+            try {
+                const response = await fetch('/api/cards');
+                const cards = await response.json();
+                const container = document.getElementById('cardsContainer');
+                container.innerHTML = ''; 
+
+                cards.forEach(card => {
+                    container.innerHTML += `
+                        <div class="card">
+                            <span class="badge">ID: ${card.id}</span>
+                            <div class="card-q">Ð’: ${card.front}</div>
+                            <div class="card-a">Ðž: ${card.back}</div>
+                        </div>
+                    `;
+                });
+            } catch (error) {
+                console.error("ÐžÑˆÐ¸Ð±ÐºÐ° Ð·Ð°Ð³Ñ€ÑƒÐ·ÐºÐ¸ ÐºÐ°Ñ€Ñ‚Ð¾Ñ‡ÐµÐº:", error);
+            }
+        }
+
+        window.onload = loadCards;
+    </script>
+</body>
+</html>
+
+--- ФАЙЛ: C:\Users\jikopl\Downloads\flashcard_project\index.html ---
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>AI Flashcard Generator</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; background-color: #f8f9fa; }
+        .container { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        h1, h2 { color: #343a40; }
+        .section { margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid #dee2e6; }
+        textarea { width: 100%; height: 100px; padding: 10px; margin-bottom: 10px; border-radius: 5px; border: 1px solid #ced4da; }
+        button { background-color: #0d6efd; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 16px; transition: 0.3s; }
+        button:hover { background-color: #0b5ed7; }
+        button:disabled { background-color: #6c757d; cursor: not-allowed; }
+        input[type="file"] { margin-bottom: 10px; }
+        
+        #loader { display: none; margin: 20px 0; font-weight: bold; color: #0d6efd; text-align: center; }
+        
+        .cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; margin-top: 20px; }
+        .card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); border-left: 5px solid #198754; display: flex; flex-direction: column; justify-content: space-between;}
+        .card-q { font-weight: bold; color: #212529; margin-bottom: 10px; }
+        .card-a { color: #495057; }
+        .badge { background: #e9ecef; padding: 3px 8px; border-radius: 10px; font-size: 12px; color: #6c757d; align-self: flex-start; margin-bottom: 10px;}
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>ðŸ§  AI Flashcard Generator (Local-First)</h1>
+        <p>Ð¡Ð¸ÑÑ‚ÐµÐ¼Ð° Ð°Ð²Ñ‚Ð¾Ð¼Ð°Ñ‚Ð¸Ñ‡ÐµÑÐºÐ¾Ð¹ Ð³ÐµÐ½ÐµÑ€Ð°Ñ†Ð¸Ð¸ ÑƒÑ‡ÐµÐ±Ð½Ñ‹Ñ… ÐºÐ°Ñ€Ñ‚Ð¾Ñ‡ÐµÐº Ñ Ð½ÑƒÐ»ÐµÐ²Ð¾Ð¹ ÑÑ‚Ð¾Ð¸Ð¼Ð¾ÑÑ‚ÑŒÑŽ Ð¸Ð½Ñ„ÐµÑ€ÐµÐ½ÑÐ° Ð¸ 100% Ð¿Ñ€Ð¸Ð²Ð°Ñ‚Ð½Ð¾ÑÑ‚ÑŒÑŽ.</p>
+        
+        <div class="section">
+            <h2>ðŸ“ Ð¢ÐµÐºÑÑ‚</h2>
+            <textarea id="textInput" placeholder="Ð’ÑÑ‚Ð°Ð²ÑŒÑ‚Ðµ ÐºÐ¾Ð½ÑÐ¿ÐµÐºÑ‚ Ð¸Ð»Ð¸ Ñ‚ÐµÐºÑÑ‚ ÑÑŽÐ´Ð°..."></textarea>
+            <button id="btnText" onclick="generate('text')">Ð¡Ð³ÐµÐ½ÐµÑ€Ð¸Ñ€Ð¾Ð²Ð°Ñ‚ÑŒ Ð¸Ð· Ñ‚ÐµÐºÑÑ‚Ð°</button>
+        </div>
+
+        <div class="section">
+            <h2>ðŸ“„ Ð¢ÐµÐºÑÑ‚Ð¾Ð²Ñ‹Ð¹ Ð´Ð¾ÐºÑƒÐ¼ÐµÐ½Ñ‚ (.txt, .docx)</h2>
+            <input type="file" id="docInput" accept=".txt,.docx">
+            <button id="btnDocument" onclick="generate('document')">ÐŸÑ€Ð¾Ð°Ð½Ð°Ð»Ð¸Ð·Ð¸Ñ€Ð¾Ð²Ð°Ñ‚ÑŒ Ð´Ð¾ÐºÑƒÐ¼ÐµÐ½Ñ‚</button>
+        </div>
+
+        <div class="section" style="border-bottom: none; margin-bottom: 0; padding-bottom: 0;">
+            <h2>ðŸ–¼ï¸ Ð˜Ð·Ð¾Ð±Ñ€Ð°Ð¶ÐµÐ½Ð¸Ðµ (Ð¡Ñ…ÐµÐ¼Ñ‹, Ñ„Ð¾Ñ‚Ð¾, Ð¾Ð±ÑŠÐµÐºÑ‚Ñ‹)</h2>
+            <input type="file" id="imgInput" accept="image/png, image/jpeg, image/webp">
+            <button id="btnImage" onclick="generate('image')">Ð Ð°ÑÐ¿Ð¾Ð·Ð½Ð°Ñ‚ÑŒ Ð¸Ð·Ð¾Ð±Ñ€Ð°Ð¶ÐµÐ½Ð¸Ðµ</button>
+        </div>
+    </div>
+
+    <div id="loader">ÐÐ½Ð°Ð»Ð¸Ð· Ð´Ð°Ð½Ð½Ñ‹Ñ… Ð½ÐµÐ¹Ñ€Ð¾ÑÐµÑ‚ÑŒÑŽ... ÐŸÐ¾Ð¶Ð°Ð»ÑƒÐ¹ÑÑ‚Ð°, Ð¿Ð¾Ð´Ð¾Ð¶Ð´Ð¸Ñ‚Ðµ (ÑÑ‚Ð¾ Ð¼Ð¾Ð¶ÐµÑ‚ Ð·Ð°Ð½ÑÑ‚ÑŒ Ð²Ñ€ÐµÐ¼Ñ) â³</div>
+
+    <div class="container">
+        <h2>ðŸ“š Ð“Ð¾Ñ‚Ð¾Ð²Ñ‹Ðµ ÐºÐ°Ñ€Ñ‚Ð¾Ñ‡ÐºÐ¸</h2>
+        <button onclick="loadCards()" style="background-color: #198754; margin-bottom: 15px;">ðŸ”„ ÐžÐ±Ð½Ð¾Ð²Ð¸Ñ‚ÑŒ Ð²Ð¸Ñ‚Ñ€Ð¸Ð½Ñƒ</button>
+        <div id="cardsContainer" class="cards-grid"></div>
+    </div>
+
+    <script>
+        async function generate(type) {
+            const btnId = `btn${type.charAt(0).toUpperCase() + type.slice(1)}`;
+            const btn = document.getElementById(btnId);
+            const loader = document.getElementById('loader');
+            let url = `/api/generate/${type}`;
+            let options = { method: 'POST' };
+
+            if (type === 'text') {
+                const content = document.getElementById('textInput').value;
+                if (!content) return alert("Ð’Ð²ÐµÐ´Ð¸Ñ‚Ðµ Ñ‚ÐµÐºÑÑ‚!");
+                options.headers = { 'Content-Type': 'application/json' };
+                options.body = JSON.stringify({ content: content });
+            } else {
+                const input = document.getElementById(type === 'document' ? 'docInput' : 'imgInput');
+                const file = input.files[0];
+                if (!file) return alert("Ð’Ñ‹Ð±ÐµÑ€Ð¸Ñ‚Ðµ Ñ„Ð°Ð¹Ð»!");
+                
+                const formData = new FormData();
+                formData.append("file", file);
+                options.body = formData;
+            }
+
+            btn.disabled = true;
+            loader.style.display = 'block';
+
+            try {
+                const response = await fetch(url, options);
+                if (!response.ok) throw new Error("ÐžÑˆÐ¸Ð±ÐºÐ° Ð³ÐµÐ½ÐµÑ€Ð°Ñ†Ð¸Ð¸. ÐŸÑ€Ð¾Ð²ÐµÑ€ÑŒÑ‚Ðµ ÐºÐ¾Ð½ÑÐ¾Ð»ÑŒ ÑÐµÑ€Ð²ÐµÑ€Ð°.");
+                
+                if (type === 'text') document.getElementById('textInput').value = '';
+                else document.getElementById(type === 'document' ? 'docInput' : 'imgInput').value = '';
+                
+                alert("ÐšÐ°Ñ€Ñ‚Ð¾Ñ‡ÐºÐ¸ ÑƒÑÐ¿ÐµÑˆÐ½Ð¾ ÑÐ¾Ð·Ð´Ð°Ð½Ñ‹!");
+                loadCards(); 
+            } catch (error) {
+                alert(error.message);
+            } finally {
+                btn.disabled = false;
+                loader.style.display = 'none';
+            }
+        }
+
+        async function loadCards() {
+            try {
+                const response = await fetch('/api/cards');
+                const cards = await response.json();
+                const container = document.getElementById('cardsContainer');
+                container.innerHTML = ''; 
+
+                cards.forEach(card => {
+                    container.innerHTML += `
+                        <div class="card">
+                            <span class="badge">ID: ${card.id}</span>
+                            <div class="card-q">Ð’: ${card.front}</div>
+                            <div class="card-a">Ðž: ${card.back}</div>
+                        </div>
+                    `;
+                });
+            } catch (error) {
+                console.error("ÐžÑˆÐ¸Ð±ÐºÐ° Ð·Ð°Ð³Ñ€ÑƒÐ·ÐºÐ¸ ÐºÐ°Ñ€Ñ‚Ð¾Ñ‡ÐµÐº:", error);
+            }
+        }
+
+        window.onload = loadCards;
+    </script>
+</body>
+</html>

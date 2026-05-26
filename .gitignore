@@ -1,0 +1,10 @@
+*.db
+flashcards.db
+*.tflite
+*.bin
+*.gguf
+models/
+__pycache__/
+*.pyc
+.venv/
+venv/
