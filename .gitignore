@@ -8,3 +8,4 @@ __pycache__/
 *.pyc
 .venv/
 venv/
+llama-b9297-bin-win-vulkan-x64/
