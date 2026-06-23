@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+  <meta name="theme-color" content="#080A10" />
+  <title>AI Flashcards — Knowledge Canvas</title>
+  <link rel="stylesheet" href="/static/css/app.css?v=159" />
+</head>
+<body>
+  <div id="app" class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <section class="brand-panel">
+        <div class="brand-mark">⚡</div>
+        <div class="brand-copy">
+          <div class="brand-title">AI Flashcards</div>
+          <div class="brand-subtitle">Local Knowledge Canvas</div>
+        </div>
+        <button class="panel-close" id="closeSidebarBtn" title="Скрыть левую панель">‹</button>
+      </section>
+
+      <section class="side-section">
+        <div class="side-head">
+          <span>Колоды</span>
+          <button class="tiny-btn" id="addDeckBtn" title="Создать колоду">＋</button>
+        </div>
+        <div class="deck-list" id="deckList"></div>
+      </section>
+
+      <section class="side-section side-section-grow">
+        <div class="side-head">
+          <span>Источники</span>
+          <button class="tiny-btn" data-action="add-source" title="Добавить источник">＋</button>
+        </div>
+        <div class="source-list" id="sourceList"></div>
+      </section>
+
+      <section class="side-section">
+        <div class="side-head"><span>Теги</span><button class="tiny-btn" id="clearFilterBtn" title="Сбросить фильтр">×</button></div>
+        <div class="tag-cloud" id="tagCloud"></div>
+      </section>
+    </aside>
+
+    <main class="main-area">
+      <header class="commandbar">
+        <button class="toolbar-icon mobile-panel-toggle" id="openSidebarBtn" title="Показать левую панель">☰</button>
+        <input class="search" id="searchInput" placeholder="Поиск по всем колодам, источникам, карточкам, #тегам…" />
+        <div class="search-results hidden" id="searchResults"></div>
+        <button class="toolbar-icon" id="commandBtn" title="Командное меню">⌘</button>
+      </header>
+
+      <div class="canvas-wrap" id="workspace">
+        <div class="canvas-grid"></div>
+        <div class="canvas" id="canvas">
+          <svg class="edges" id="edgesSvg"></svg>
+          <div class="nodes" id="nodesLayer"></div>
+        </div>
+        <div class="task-view hidden" id="taskView"></div>
+        <div class="lasso hidden" id="lasso"></div>
+
+        <div class="empty-state" id="emptyState">
+          <div class="empty-icon">🧠</div>
+          <h1>Пустой граф знаний</h1>
+          <p>Добавь PDF, ссылку, YouTube, Wikipedia или обычный текст. Источник появится на холсте, а карточки будут связаны с ним линиями.</p>
+          <div class="empty-actions">
+            <button class="primary big" data-action="add-source">Добавить источник</button>
+          </div>
+        </div>
+
+        <div class="canvas-hud">
+          <button id="fitBtn" title="Сбросить вид">⛶</button>
+          <button id="layoutBtn" title="Space очистка · Space×2 авто-разметка · Esc сброс · Alt/Shift+drag панорама · WASD/стрелки панорама · +/- zoom · 0 fit">⌘</button>
+          <button id="viewModeBtn" class="hud-mode-btn" title="Переключить вид" aria-label="Переключить вид">✅</button>
+          <select id="themeSelect" class="hud-select" title="Тема интерфейса">
+            <option value="light">Светлая</option>
+            <option value="dark">Тёмная</option>
+          </select>
+          <label class="hud-color" title="Полная тема этой колоды: фон, панели, карточки" aria-label="Тема колоды"><span aria-hidden="true">🎨</span><button type="button" id="deckThemeColor" class="deck-color-button" data-value="#8f2942" aria-label="Цвет темы колоды"></button></label>
+          <button id="deckThemeResetBtn" title="Сбросить цвет колоды">↺</button>
+          <button id="zoomOutBtn" title="Отдалить">−</button>
+          <span id="zoomLabel">100%</span>
+          <button id="zoomInBtn" title="Приблизить">＋</button>
+        </div>
+
+        <div class="selection-toast hidden" id="selectionToast"></div>
+      </div>
+    </main>
+
+    <aside class="inspector" id="inspector">
+      <button class="panel-close inspector-close" id="closeInspectorBtn" title="Скрыть инспектор">›</button>
+    </aside>
+  </div>
+
+
+  <div class="progress generation-progress hidden" id="progressBox">
+    <div class="progress-orb"><span id="progressPct">0%</span></div>
+    <div class="progress-main">
+      <div class="progress-top">
+        <span id="progressText">Генерация…</span>
+        <span id="progressTargetBadge" class="progress-target-badge" data-model-class="auto">⚙️ Модель</span>
+        <span id="progressRatio"></span>
+      </div>
+      <div class="progress-track"><div id="progressFill"></div></div>
+      <div class="progress-meta" id="progressMeta">Подготовка…</div>
+      <div class="progress-steps">
+        <span data-step="read">Источник</span>
+        <span data-step="generate">Модель</span>
+        <span data-step="save">Сохранение</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="menu-popover hidden" id="exportMenu">
+    <div class="menu-label" id="exportScopeLabel">Экспорт текущей колоды</div>
+    <button data-export="anki">📦 Anki .apkg</button>
+    <button data-export="quizlet">🧩 Quizlet TSV</button>
+    <button data-export="csv">📊 CSV</button>
+    <button data-export="pdf">📄 PDF-шпаргалка</button>
+    <button data-export="json">🗺️ JSON графа</button>
+  </div>
+
+  <div class="context-menu hidden" id="contextMenu"></div>
+  <div class="image-hover-preview hidden" id="imageHoverPreview"><img alt=""></div>
+
+  <div class="modal" id="sourceModal">
+    <div class="dialog source-dialog">
+      <div class="dialog-head">
+        <div>
+          <h2>Добавить источник</h2>
+          <p>Текст, URL, Wikipedia, YouTube или файл. На холсте источник станет отдельной нодой.</p>
+        </div>
+        <button class="icon-btn" data-close="sourceModal">×</button>
+      </div>
+      <div class="drop-card" id="sourceDropZone">
+        <input id="sourceTitle" placeholder="Название источника, можно оставить пустым" />
+        <textarea id="sourceText" rows="10" placeholder="Вставь текст, ссылку на статью, ru.wikipedia.org/wiki/..., YouTube URL или перетащи файл сюда…"></textarea>
+        <div class="source-options">
+          <button class="secondary" id="uploadFileBtn">📁 Файл / источник</button>
+          <button class="secondary" id="importCardsBtn">⬇️ Импорт Anki / Quizlet</button>
+          <button class="secondary" id="pasteClipboardBtn">Вставить из буфера</button>
+          <span class="muted">PDF, DOCX, TXT, EPUB, FB2, изображение, APKG, CSV, TSV</span>
+        </div>
+      </div>
+      <div class="dialog-actions">
+        <button class="ghost" data-close="sourceModal">Отмена</button>
+        <button class="primary" id="saveSourceBtn">Создать источник</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="cardModal">
+    <div class="dialog editor-dialog">
+      <div class="dialog-head">
+        <div><h2>Редактирование карточки</h2></div>
+        <button class="icon-btn" data-close="cardModal">×</button>
+      </div>
+      <input type="hidden" id="editCardId" />
+      <div class="form-grid">
+        <label>Вопрос</label>
+        <input id="editFront" />
+        <label>Ответ</label>
+        <textarea id="editBack" rows="5"></textarea>
+        <label>Цитата из источника</label>
+        <textarea id="editQuote" rows="3"></textarea>
+        <label>Мнемоника</label>
+        <textarea id="editMnemonic" rows="3" placeholder="Запоминалка без тегов"></textarea>
+        <label>Теги</label>
+        <input id="editTags" placeholder="#кислород #химия #элемент" />
+        <label>Тип карточки</label>
+        <select id="editCardType">
+          <option value="basic">Вопрос / ответ</option>
+          <option value="definition">Определение</option>
+          <option value="fact">Факт</option>
+          <option value="concept">Понимание</option>
+          <option value="cloze">Пропуск</option>
+          <option value="true_false">Верно / неверно</option>
+          <option value="mcq">Выбор ответа</option>
+        </select>
+        <label>Статус</label>
+        <select id="editStatus">
+          <option value="inbox">📥 Входящие</option>
+          <option value="today">🔥 Сегодня</option>
+          <option value="planned">📅 Запланировано</option>
+          <option value="done">✅ Готово</option>
+        </select>
+        <label>Дата повторения</label>
+        <input id="editDueDate" type="date" />
+      </div>
+      <div class="dialog-actions">
+        <button class="ghost" data-close="cardModal">Отмена</button>
+        <button class="primary" id="saveCardBtn">Сохранить</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="sourceInfoModal">
+    <div class="dialog source-reader">
+      <div class="dialog-head">
+        <div><h2 id="sourceInfoTitle">Источник</h2><p id="sourceInfoMeta"></p></div>
+        <button class="icon-btn" data-close="sourceInfoModal">×</button>
+      </div>
+      <pre class="source-body" id="sourceInfoBody"></pre>
+      <textarea class="source-body source-edit hidden" id="sourceInfoEdit" rows="16" spellcheck="false"></textarea>
+      <div class="dialog-actions"><button class="secondary" id="editSourceInfoBtn">✏️ Редактировать текст</button><button class="primary hidden" id="saveSourceInfoBtn">Сохранить текст</button><button class="primary" data-close="sourceInfoModal">Закрыть</button></div>
+    </div>
+  </div>
+
+  <div class="modal" id="importModal">
+    <div class="dialog">
+      <div class="dialog-head">
+        <div><h2>Импорт Anki / Quizlet</h2><p>Импорт в текущую колоду. Поддерживаются .apkg, .csv, .tsv, .txt.</p></div>
+        <button class="icon-btn" data-close="importModal">×</button>
+      </div>
+      <button class="primary full" id="chooseImportBtn">Выбрать файл</button>
+    </div>
+  </div>
+
+
+  <div class="modal" id="studyModal">
+    <div class="dialog study-dialog">
+      <div class="dialog-head">
+        <div><h2>Режим повторения</h2><p id="studyMeta">Карточки на сегодня</p></div>
+        <button class="icon-btn" data-close="studyModal">×</button>
+      </div>
+      <div class="study-filters">
+        <select id="studyMode"><option value="due">К повторению</option><option value="inbox">Входящие</option><option value="planned">План</option><option value="today">Сегодня</option><option value="done">Готово</option><option value="date">По дате…</option><option value="new">Новые</option><option value="all">Все активные</option></select>
+        <select id="studyType"><option value="">Все типы</option><option value="basic">Вопрос / ответ</option><option value="definition">Определение</option><option value="fact">Факт</option><option value="concept">Понимание</option><option value="cloze">Пропуск</option><option value="true_false">Верно / неверно</option><option value="mcq">Выбор ответа</option></select>
+        <select id="studyModel"><option value="">Все модели</option><option value="fast">⚡ Gemma</option><option value="quality">🧠 SuperGemma</option><option value="import">📦 Импорт</option></select>
+        <button class="secondary" id="reloadStudyBtn">Обновить</button>
+      </div>
+      <div class="study-card" id="studyCardBox">
+        <div class="study-empty">Нет карточек для повторения.</div>
+      </div>
+      <div class="study-actions hidden" id="studyAnswerActions">
+        <button class="secondary danger" data-rate="again">Заново</button>
+        <button class="secondary" data-rate="hard">Трудно</button>
+        <button class="primary" data-rate="good">Хорошо</button>
+        <button class="secondary" data-rate="easy">Легко</button>
+      </div>
+      <div class="dialog-actions">
+        <button class="secondary" id="showStudyAnswerBtn">Показать ответ</button>
+        <button class="ghost" data-close="studyModal">Закрыть</button>
+      </div>
+    </div>
+  </div>
+
+
+  <div class="modal" id="commandModal">
+    <div class="dialog command-dialog">
+      <div class="command-input-wrap"><span>⌘</span><input id="commandInput" placeholder="Команда: TickTick, граф, экспорт, импорт, разметка, панели…" /></div>
+      <div class="command-list" id="commandList"></div>
+    </div>
+  </div>
+
+  <input type="file" id="hiddenFileInput" hidden />
+  <input type="file" id="hiddenImportInput" hidden accept=".apkg,.csv,.tsv,.txt" />
+  <input type="file" id="hiddenSourceImageInput" hidden accept="image/*" />
+  <input type="file" id="hiddenCardImageInput" hidden accept="image/*" />
+  <script type="module" src="/static/js/app.js?v=159"></script>
+</body>
+</html>

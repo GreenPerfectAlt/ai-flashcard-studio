@@ -1,0 +1,61 @@
+# Python
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local models / inference files
+models/
+*.gguf
+*.litertlm
+*.safetensors
+*.bin
+*.pt
+*.onnx
+
+# Local data
+*.db
+*.sqlite
+*.sqlite3
+logs/
+exports/
+user_data/
+tmp/
+cache/
+media_cache/
+
+# Secrets / local config
+.env
+.env.local
+*.local
+
+# Frontend build artifacts
+node_modules/
+dist/
+build/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# local data
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+uploads/
+exports/
+logs/
+models/
+.venv/
+__pycache__/
+*.pyc
+.env
+.env.local

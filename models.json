@@ -1,0 +1,57 @@
+{
+  "models": {
+    "gemma-4-E2B-it": {
+      "file": "models/gemma-4-E2B-it.litertlm",
+      "title": "Gemma 4 E2B LiteRT",
+      "role": "fast",
+      "description": "Основная быстрая модель для генерации карточек.",
+      "preferred_backends": [
+        "GPU",
+        "CPU"
+      ],
+      "prompt_chars": 5200,
+      "warmup": true,
+      "tool_fallback": true,
+      "backend_type": "litert"
+    },
+    "supergemma4-e4b-abliterated": {
+      "file": "models/supergemma4-e4b-abliterated.litertlm",
+      "title": "SuperGemma 4 E4B LiteRT",
+      "role": "quality",
+      "description": "Качественная multilingual модель через LiteRT. GPU-first, CPU fallback.",
+      "preferred_backends": [
+        "GPU",
+        "CPU"
+      ],
+      "prompt_chars": 4200,
+      "warmup": false,
+      "tool_fallback": false,
+      "backend_type": "litert"
+    },
+    "llama-server-supergemma4-e4b": {
+      "title": "SuperGemma 4 E4B llama.cpp",
+      "role": "quality",
+      "description": "Подключение к уже запущенному llama-server /v1/chat/completions. Для GGUF/QAT SuperGemma.",
+      "preferred_backends": [
+        "llama-server"
+      ],
+      "prompt_chars": 7600,
+      "warmup": false,
+      "tool_fallback": false,
+      "backend_type": "llama_server"
+    },
+    "openrouter-custom": {
+      "title": "OpenRouter API",
+      "role": "cloud",
+      "description": "Cloud generation via OpenRouter. Key/model are taken from OPENROUTER_API_KEY and OPENROUTER_MODEL.",
+      "preferred_backends": [
+        "openrouter"
+      ],
+      "prompt_chars": 12000,
+      "warmup": false,
+      "tool_fallback": false,
+      "backend_type": "openrouter",
+      "model_id": "openrouter/auto"
+    }
+  }
+}
