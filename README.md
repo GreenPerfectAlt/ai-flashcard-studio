@@ -199,4 +199,4 @@ Thumbs.db
 
 License is not finalized in this repository unless a `LICENSE` file is present.
 
-![https://github.com/GreenPerfectAlt/ai-flashcard-studio/blob/main/LICENSE] 
+[Apache 2.0](LICENSE)
