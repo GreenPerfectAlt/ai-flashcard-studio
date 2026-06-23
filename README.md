@@ -1,5 +1,6 @@
 
 # AI Flashcard Studio
+![AI Flashcard Studio Canvas Preview](iamge.png)
 
 ![AI Flashcard Studio Canvas Preview](canvas_preview.jpg)
 
